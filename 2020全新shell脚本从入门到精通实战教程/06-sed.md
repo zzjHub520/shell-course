@@ -66,3 +66,9 @@ sed 'p' data
 
 
 ![image-20220515165953973](MarkDownImages/06-sed%E5%92%8Cawk.assets/image-20220515165953973.png)
+
+```sh
+#删除掉以#号开头的行
+sed -r '/(^#|^\s+#)/d' nginx.conf
+```
+
