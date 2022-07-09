@@ -36,6 +36,18 @@ sed 'i\hello world' data
 sed '3i\hello world' data
 sed '2,4i\hello world' data
 sed '/3 the/i\hello world' data
+#每行后面添加一行空行：
+sed G data
+# 每行前面添加一行空行：
+sed  '{x;p;x;}' data
+#每行后面添加两行空行：
+sed  'G;G'  data
+#每行前面添加两行空行：
+sed '{x;p;x;x;p;x;}' data
+sed '/shui/G' tmp  
+sed '/shui/{x;p;x;G}' tmp 
+sed '1{x;p;x;}' tmp
+sed '1G' tmp
 #删除 d
 sed 'd' data
 sed '3d' data
