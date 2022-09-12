@@ -73,6 +73,7 @@ sed '2,4y/abcdefg/ABCDEFG/' data
 sed '/3 the/y/abcdefg/ABCDEFG/' data
 #打印
 sed 'p' data
+sed -n '/hadoopPath/p' hadoop-HA.conf
 ```
 
 
