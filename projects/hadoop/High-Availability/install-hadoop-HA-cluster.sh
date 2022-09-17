@@ -9,9 +9,10 @@ dfsHaNamenodes=(`sed -n '/dfsHaNamenodes/p' ${hadoopHAConf} | tr -d [:space:] | 
 workerNodes=(`sed -n '/workerNodes/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}' | tr "," " "`)
 journalNodes=(`sed -n '/journalNodes/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}' | tr "," " "`)
 yarnHaResourcemanageresNodes=(`sed -n '/yarnHaResourcemanageresNodes/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}' | tr "," " "`)
+jobhistoryHost=`sed -n '/jobhistoryHost/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}'`
+jobhistoryWebappPort=`sed -n '/jobhistoryWebappPort/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}'`
 
 function hadoop_env(){
-	sed -i '$a\export HDFS_NAMENODE_USER=root' ${hadoopPath}/etc/hadoop/hadoop-env.sh
 	sed -i '$a\export HDFS_NAMENODE_USER=root' ${hadoopPath}/etc/hadoop/hadoop-env.sh
 	sed -i '$a\export HDFS_DATANODE_USER=root' ${hadoopPath}/etc/hadoop/hadoop-env.sh
 	sed -i '$a\export HDFS_SECONDARYNAMENODE_USER=root' ${hadoopPath}/etc/hadoop/hadoop-env.sh
@@ -100,31 +101,34 @@ function hdfs_site(){
 	sed -i '/<\/configuration>/i\    </property>' $fileName
 	sed -i '/<\/configuration>/{x;p;x;G;}' $fileName
 	
+	local nameNodeRPCPort=`sed -n '/nameNodeRPCPort/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}'`
 	sed -i '/<\/configuration>/i\    <!-- RPC通信地址 -->' $fileName
 	for((i=0; i<${#dfsHaNamenodes[@]}; i++))
 	do
 		sed -i '/<\/configuration>/i\    <property>' $fileName
 		sed -i '/<\/configuration>/i\        <name>dfs.namenode.rpc-address.'"${dfsNameservices}"'.nn'"$((i+1))"'</name>' $fileName
-		sed -i '/<\/configuration>/i\        <value>'"${dfsHaNamenodes[$i]}"':9820</value>' $fileName
+		sed -i '/<\/configuration>/i\        <value>'"${dfsHaNamenodes[$i]}"':'"${nameNodeRPCPort}"'</value>' $fileName
 		sed -i '/<\/configuration>/i\    </property>' $fileName
 	done	
 	sed -i '/<\/configuration>/{x;p;x;G;}' $fileName
 	
+	local nameNodeHttpPort=`sed -n '/nameNodeHttpPort/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}'`
 	sed -i '/<\/configuration>/i\    <!-- http通信地址 -->' $fileName
 	for((i=0; i<${#dfsHaNamenodes[@]}; i++))
 	do
 		sed -i '/<\/configuration>/i\    <property>' $fileName
 		sed -i '/<\/configuration>/i\        <name>dfs.namenode.http-address.'"${dfsNameservices}"'.nn'"$((i+1))"'</name>' $fileName
-		sed -i '/<\/configuration>/i\        <value>'"${dfsHaNamenodes[$i]}"':9870</value>' $fileName
+		sed -i '/<\/configuration>/i\        <value>'"${dfsHaNamenodes[$i]}"':'"${nameNodeHttpPort}"'</value>' $fileName
 		sed -i '/<\/configuration>/i\    </property>' $fileName
 	done
 	sed -i '/<\/configuration>/{x;p;x;G;}' $fileName
 	
 	############# 设置JournalNode #########################
+	local journalNodePort=`sed -n '/journalNodePort/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}'`
 	local editsDirStr=""
 	for((i=0; i<${#journalNodes[@]}; i++))
 	do
-		editsDirStr=${editsDirStr}";"${journalNodes[$i]}":8485"
+		editsDirStr=${editsDirStr}";"${journalNodes[$i]}":"${journalNodePort}
 	done
 	editsDirStr=${editsDirStr:1}
 	
@@ -178,6 +182,22 @@ function mapred_site(){
 	sed -i '/<\/configuration>/i\    <property>' $fileName
 	sed -i '/<\/configuration>/i\        <name>mapreduce.framework.name</name>' $fileName
 	sed -i '/<\/configuration>/i\        <value>yarn</value>' $fileName
+	sed -i '/<\/configuration>/i\    </property>' $fileName
+	sed -i '/<\/configuration>/{x;p;x;G;}' $fileName
+	
+	local jobhistoryPort=`sed -n '/jobhistoryPort/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}'`
+	sed -i '/<\/configuration>/i\    <!-- 历史服务器端地址 -->' $fileName
+	sed -i '/<\/configuration>/i\    <property>' $fileName
+	sed -i '/<\/configuration>/i\        <name>mapreduce.jobhistory.address</name>' $fileName
+	sed -i '/<\/configuration>/i\        <value>'"${jobhistoryHost}"':'"${jobhistoryPort}"'</value>' $fileName
+	sed -i '/<\/configuration>/i\    </property>' $fileName
+	sed -i '/<\/configuration>/{x;p;x;G;}' $fileName
+	
+	
+	sed -i '/<\/configuration>/i\    <!-- 历史服务器web端地址 -->' $fileName
+	sed -i '/<\/configuration>/i\    <property>' $fileName
+	sed -i '/<\/configuration>/i\        <name>mapreduce.jobhistory.webapp.address</name>' $fileName
+	sed -i '/<\/configuration>/i\        <value>'"${jobhistoryHost}"':'"${jobhistoryWebappPort}"'</value>' $fileName
 	sed -i '/<\/configuration>/i\    </property>' $fileName
 	sed -i '/<\/configuration>/{x;p;x;G;}' $fileName
 }
@@ -246,13 +266,13 @@ function yarn_site(){
 	done	
 	sed -i '/<\/configuration>/{x;p;x;G;}' $fileName
 
-
+	local yarnNodeWebappPort=`sed -n '/yarnNodeWebappPort/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}'`
 	sed -i '/<\/configuration>/i\    <!-- Hadoop YARN资源管理系统 -->' $fileName
 	for((i=0; i<${#yarnHaResourcemanageresNodes[@]}; i++))
 	do
 		sed -i '/<\/configuration>/i\    <property>' $fileName
 		sed -i '/<\/configuration>/i\        <name>yarn.resourcemanager.webapp.address.rm'"$((i+1))"'</name>' $fileName
-		sed -i '/<\/configuration>/i\        <value>'"${yarnHaResourcemanageresNodes[$i]}"':8088</value>' $fileName
+		sed -i '/<\/configuration>/i\        <value>'"${yarnHaResourcemanageresNodes[$i]}"':'"${yarnNodeWebappPort}"'</value>' $fileName
 		sed -i '/<\/configuration>/i\    </property>' $fileName
 	done	
 	sed -i '/<\/configuration>/{x;p;x;G;}' $fileName
@@ -265,11 +285,32 @@ function yarn_site(){
 	sed -i '/<\/configuration>/i\    </property>' $fileName
 	sed -i '/<\/configuration>/{x;p;x;G;}' $fileName
 	
-	
 	sed -i '/<\/configuration>/i\    <!-- nodemanager获取数据的方式 -->' $fileName
 	sed -i '/<\/configuration>/i\    <property>' $fileName
 	sed -i '/<\/configuration>/i\        <name>yarn.nodemanager.aux-services</name>' $fileName
 	sed -i '/<\/configuration>/i\        <value>mapreduce_shuffle</value>' $fileName
+	sed -i '/<\/configuration>/i\    </property>' $fileName
+	sed -i '/<\/configuration>/{x;p;x;G;}' $fileName
+	
+	# 日志功能
+	sed -i '/<\/configuration>/i\    <!-- 开启日志聚集功能 -->' $fileName
+	sed -i '/<\/configuration>/i\    <property>' $fileName
+	sed -i '/<\/configuration>/i\        <name>yarn.log-aggregation-enable</name>' $fileName
+	sed -i '/<\/configuration>/i\        <value>true</value>' $fileName
+	sed -i '/<\/configuration>/i\    </property>' $fileName
+	sed -i '/<\/configuration>/{x;p;x;G;}' $fileName
+	
+	sed -i '/<\/configuration>/i\    <!-- 设置日志聚集服务器地址 -->' $fileName
+	sed -i '/<\/configuration>/i\    <property>' $fileName
+	sed -i '/<\/configuration>/i\        <name>yarn.log.server.url</name>' $fileName
+	sed -i '/<\/configuration>/i\        <value>http://'"${jobhistoryHost}"':'"${jobhistoryWebappPort}"'/jobhistory/logs</value>' $fileName
+	sed -i '/<\/configuration>/i\    </property>' $fileName
+	sed -i '/<\/configuration>/{x;p;x;G;}' $fileName
+	
+	sed -i '/<\/configuration>/i\    <!-- 设置日志保留时间为7天 -->' $fileName
+	sed -i '/<\/configuration>/i\    <property>' $fileName
+	sed -i '/<\/configuration>/i\        <name>yarn.log-aggregation.retain-seconds</name>' $fileName
+	sed -i '/<\/configuration>/i\        <value>604800</value>' $fileName
 	sed -i '/<\/configuration>/i\    </property>' $fileName
 	sed -i '/<\/configuration>/{x;p;x;G;}' $fileName
 }
@@ -372,4 +413,4 @@ xsync ${hadoopPath}
 
 initialDfs
 start-all.sh
-
+mapred --daemon start historyserver
