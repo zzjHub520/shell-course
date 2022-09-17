@@ -403,12 +403,54 @@ function initialDfs(){
 	echo Y | hdfs zkfc -formatZK
 }
 
+function hadoop_service(){
+	cat > ${hadoopPath}/sbin/hadoop-service.sh <<EOF
+#!/bin/bash
+
+if [ \$# -lt 1 ]
+then
+    echo "No Args Input..."
+    exit ;
+fi
+
+case \$1 in
+"start")
+        echo " =================== 启动 hadoop集群 ==================="
+
+        echo " --------------- 启动 hdfs ---------------"
+        ${hadoopPath}/sbin/start-dfs.sh
+        echo " --------------- 启动 yarn ---------------"
+        ${hadoopPath}/sbin/start-yarn.sh
+        echo " --------------- 启动 historyserver ---------------"
+        ssh ${jobhistoryHost} "${hadoopPath}/bin/mapred --daemon start historyserver"
+;;
+"stop")
+        echo " =================== 关闭 hadoop集群 ==================="
+
+        echo " --------------- 关闭 historyserver ---------------"
+        ssh ${jobhistoryHost} "${hadoopPath}/bin/mapred --daemon stop historyserver"
+        echo " --------------- 关闭 yarn ---------------"
+        ${hadoopPath}/sbin/stop-yarn.sh
+        echo " --------------- 关闭 hdfs ---------------"
+        ${hadoopPath}/sbin/stop-dfs.sh
+;;
+*)
+    echo "Input Args Error..."
+;;
+esac
+
+EOF
+
+	chmod +x ${hadoopPath}/sbin/hadoop-service.sh
+}
+
 hadoop_env
 core_site
 hdfs_site
 mapred_site
 workers
 yarn_site
+hadoop_service
 xsync ${hadoopPath}
 
 initialDfs
