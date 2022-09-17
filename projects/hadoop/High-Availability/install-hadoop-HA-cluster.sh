@@ -6,7 +6,7 @@ hadoopPath=`sed -n '/hadoopPath/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=
 zookeeperQuorum=`sed -n '/zookeeperQuorum/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}'`
 dfsNameservices=`sed -n '/dfsNameservices/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}'`
 dfsHaNamenodes=(`sed -n '/dfsHaNamenodes/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}' | tr "," " "`)
-dfsHaDatanodes=(`sed -n '/dfsHaDatanodes/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}' | tr "," " "`)
+workerNodes=(`sed -n '/workerNodes/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}' | tr "," " "`)
 journalNodes=(`sed -n '/journalNodes/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}' | tr "," " "`)
 yarnHaResourcemanageresNodes=(`sed -n '/yarnHaResourcemanageresNodes/p' ${hadoopHAConf} | tr -d [:space:] | awk -F "=" '{print $2}' | tr "," " "`)
 
@@ -198,9 +198,9 @@ function editOnlyOneKeyWordLine(){
 function workers(){
 	local fileName=${hadoopPath}/etc/hadoop/workers
 		
-	for((i=0; i<${#dfsHaDatanodes[@]}; i++))
+	for((i=0; i<${#workerNodes[@]}; i++))
 	do
-		editOnlyOneKeyWordLine $fileName localhost ${dfsHaDatanodes[$i]}
+		editOnlyOneKeyWordLine $fileName localhost ${workerNodes[$i]}
 	done
 }
 
@@ -284,9 +284,9 @@ function xsync(){
 		hostMap[${dfsHaNamenodes[$i]}]=1
 	done	
 	
-	for((i=0; i<${#dfsHaDatanodes[@]}; i++))
+	for((i=0; i<${#workerNodes[@]}; i++))
 	do
-		hostMap[${dfsHaDatanodes[$i]}]=1
+		hostMap[${workerNodes[$i]}]=1
 	done
 	
 	for((i=0; i<${#journalNodes[@]}; i++))
